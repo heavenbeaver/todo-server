@@ -1,15 +1,30 @@
-import express from 'express';
+import { Router, type Request, type Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { supabase } from '../config/supabase.js';
 import { requireAuth } from '../middleware/authMiddleware.js';
 
-const router = express.Router();
+const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) throw new Error('JWT_SECRET must be defined');
 const JWT_EXP = '7d';
 
-// Регистрация (создаёт запись в users с password_hash)
-router.post('/signup', async (req, res) => {
+interface SignupRequest {
+    name: string;
+    lastName: string;
+    patronymic?: string;
+    login: string;
+    password: string;
+    head?: string;
+}
+
+interface LoginRequest {
+    login: string;
+    password: string;
+}
+
+// Регистрация нового пользователя
+router.post('/signup', async (req: Request<{}, {}, SignupRequest>, res: Response) => {
     const { name, lastName, patronymic, login, password, head } = req.body;
     if (!login || !password) return res.status(400).json({ error: 'login и password required' });
 
@@ -18,7 +33,7 @@ router.post('/signup', async (req, res) => {
 
     const { data, error } = await supabase
         .from('users')
-        .insert([{ name, lastName, patronymic, login, password: password_hash, head }]) // по умолчанию руководитель admin
+        .insert([{ name, lastName, patronymic, login, password: password_hash, head }])
         .select()
         .maybeSingle();
 
@@ -26,34 +41,39 @@ router.post('/signup', async (req, res) => {
     res.status(201).json({ id: data.id });
 });
 
-// Логин — вернёт JWT и/или установит httpOnly cookie
-router.post('/login', async (req, res) => {
+// Вход в систему
+router.post('/login', async (req: Request<{}, {}, LoginRequest>, res: Response) => {
     const { login, password } = req.body;
     if (!login || !password) return res.status(400).json({ error: 'Введите логин и пароль' });
 
     const { data: user, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('login', login)
-    .maybeSingle();
+        .from('users')
+        .select('*')
+        .eq('login', login)
+        .maybeSingle();
 
     if (error) return res.status(500).json({ error: error.message });
+    
     if (!user) return res.status(401).json({ error: 'Пользователя с таким логином не существует' });
 
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ error: 'Вы ввели неверный пароль' });
 
     const token = jwt.sign({ sub: user.id, login: user.login }, JWT_SECRET, { expiresIn: JWT_EXP });
-    // res.cookie('token', token, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' });
     res.json({ token, id: user.id, name: user.name, lastName: user.lastName, patronymic: user.patronymic, login: user.login });
 });
 
-router.get('/me', requireAuth, async (req, res) => {
+// Получение информации о текущем пользователе
+router.get('/me', requireAuth, async (req: Request, res: Response) => {
     try {
-        console.log('User from middleware:', req.user); // Для отладки
+        console.log('User from middleware:', req.user);
 
-        const userId = req.user.id; // Используем id, а не sub
-        console.log('Looking for user with ID:', userId);
+        if (!req.user) {
+            res.status(401).json({ error: 'Unauthorized'});
+            return;
+        }
+
+        const userId = req.user.id;
 
         const { data: user, error } = await supabase
             .from('users')
@@ -79,9 +99,8 @@ router.get('/me', requireAuth, async (req, res) => {
     }
 });
 
-// Logout
-router.post('/logout', (req, res) => {
-    // res.clearCookie('token', { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' });
+// Выход из системы
+router.post('/logout', (req: Request, res: Response) => {
     res.status(204).end();
 });
 
