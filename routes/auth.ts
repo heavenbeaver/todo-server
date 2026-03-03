@@ -88,7 +88,7 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
 
         const { data: user, error } = await supabase
             .from('users')
-            .select('id, login, name, lastName, patronymic')
+            .select('id, login, name, lastName, patronymic, isAdmin')
             .eq('id', userId)
             .single();
 
