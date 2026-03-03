@@ -38,7 +38,17 @@ router.post('/signup', async (req: Request<{}, {}, SignupRequest>, res: Response
         .maybeSingle();
 
     if (error) return res.status(500).json({ error: error.message });
-    res.status(201).json({ id: data.id });
+    // res.status(201).json({ id: data.id });
+
+    const token = jwt.sign({sub: data.id, login: data.login}, JWT_SECRET, {expiresIn: JWT_EXP});
+    res.status(201).json({
+        token,
+        id: data.id,
+        name: data.name,
+        lastName: data.lastName,
+        patronymic: data.patronymic,
+        login: data.login
+    });
 });
 
 // Вход в систему
