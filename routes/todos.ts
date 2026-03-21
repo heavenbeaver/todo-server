@@ -21,7 +21,7 @@ router.use(requireAuth);
 router.get("/", async (req: Request, res: Response) => {
     const {userId} = req.query;
 
-    let query = supabase.from('todos').select('*');
+    let query = supabase.from('todos').select('*').order('updateDate', {ascending: false});
 
     if (userId) {
         query = query.or(`creator.eq.${userId},responsible.eq.${userId}`);

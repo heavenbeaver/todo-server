@@ -6,7 +6,15 @@ const router = Router();
 router.get("/", async (req: Request, res: Response) => {
     const { managerId } = req.query;
 
-    let query = supabase.from("users").select("*");
+    let query = supabase.from("users").select(`
+        id, 
+        login, 
+        name, 
+        lastName, 
+        patronymic, 
+        isAdmin,
+        head
+    `).order('id');
 
     if (managerId) {
         query = query.or(`head.eq.${managerId}`);
@@ -21,7 +29,14 @@ router.get("/:id", async (req: Request, res: Response) => {
     const { id } = req.params;
     const { data, error } = await supabase
         .from("users")
-        .select("*")
+        .select(`
+            name, 
+            lastName, 
+            patronymic,
+            login, 
+            isAdmin, 
+            head
+        `)
         .eq("id", id)
         .maybeSingle();
     if (error) return res.status(500).json({ error: error.message });
