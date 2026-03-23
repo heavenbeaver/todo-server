@@ -46,10 +46,10 @@ router.get("/:id", async (req: Request, res: Response) => {
 });
 
 router.post("/", async (req: Request<{}, {}, TodoPayload>, res: Response) => {
-    const { title, desc, expireDate, createDate, updateDate, priority, status, creator, responsible } = req.body;
+    const { title, desc, expireDate, priority, status, creator, responsible } = req.body;
     const { data, error } = await supabase
         .from("todos")
-        .insert([{ title, desc, expireDate, createDate, updateDate, priority, status, creator, responsible }])
+        .insert([{ title, desc, expireDate, priority, status, creator, responsible }])
         .select();
     if (error) return res.status(500).json({ error: error.message });
     res.status(201).json(data[0]);
