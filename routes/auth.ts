@@ -4,19 +4,20 @@ import jwt from 'jsonwebtoken';
 import { supabase } from '../config/supabase.js';
 import { requireAuth } from '../middleware/authMiddleware.js';
 
+const router = Router();
+
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) throw new Error('JWT_SECRET must be defined');
 const JWT_EXP = '7d';
-
-const router = Router();
-
+const COOKIE_EXP = 7 * 24 * 60 * 60 * 1000;
 const isProduction = process.env.NODE_ENV === 'production';
+
 const cookieOptions = {
     httpOnly: true,
     secure: isProduction,
-    // In production client and API are on different domains, so cookie must be cross-site.
-    sameSite: isProduction ? 'lax' : 'none',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
+    // sameSite: isProduction ? 'lax' : 'none',
+    sameSite: 'lax',
+    maxAge: COOKIE_EXP,
     path: '/'
 } as const;
 
